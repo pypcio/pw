@@ -4,7 +4,7 @@ import "./App.css";
 function App() {
   const [name, setName] = useState("");
   addEventListener("load", async () => {
-    let sw = await navigator.serviceWorker.register("../sw.js");
+    let sw = await navigator.serviceWorker.register("../sw.js", { scope: "/" });
     console.log(sw);
   });
   async function subscribe() {
