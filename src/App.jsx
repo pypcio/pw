@@ -1,43 +1,29 @@
 import React, { useState } from "react";
-import addNotification from "react-push-notification";
-import { Notifications } from "react-push-notification";
-import logo from "./assets/react.svg";
+// import logo from "./assets/react.svg";
 import "./App.css";
 function App() {
   const [name, setName] = useState("");
+  addEventListener("load", async () => {
+    let sw = await navigator.serviceWorker.register("../sw.js");
+    console.log(sw);
+  });
+  async function subscribe() {
+    let sw = await navigator.serviceWorker.ready;
+    let push = await sw.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey:
+        "BAxlMZZzox2QO5gfZJ6ScvGqUvRcZIB7_h14tHqZ0lyEuDWh1DzPGV7bLV-ILtyGoFgMEBCi6TgiQoDFoIHaww4",
+    });
+    console.log(JSON.stringify(push));
+  }
 
-  function warningNotification() {
-    addNotification({
-      title: "Warning",
-      subtitle: "Please fill it",
-      message: "You have to enter name",
-      theme: "red",
-      icon: logo,
-      closeButton: "X",
-    });
-  }
-  function sucessNotification() {
-    addNotification({
-      title: "Success",
-      subtitle: "You have successfully submitted",
-      message: "Welcome to GeeksforGeeks",
-      theme: "darkblue",
-      closeButton: "X",
-      icon: logo,
-      native: true,
-      onClick: () =>
-        (window.location = "https://blog.agney.dev/one-signal-on-gatsby/"),
-      // backgroundTop: "green",
-      // backgroundBottom: "yellowgreen",
-    });
-  }
   function handleSubmit(e) {
     console.log(name);
     e.preventDefault();
     if (name === "") {
-      warningNotification();
+      console.log("siema");
     } else {
-      sucessNotification();
+      console.log("Nie siema");
     }
   }
   function handleEvent(e) {
@@ -47,7 +33,6 @@ function App() {
   }
   return (
     <div className="App">
-      <Notifications />
       <h1>Chcesz jakies powiadomienie?</h1>
       <div>Siema siema co tam slychac</div>
       <form onSubmit={handleSubmit}>
