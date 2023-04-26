@@ -35,10 +35,11 @@ function App() {
     <div className="App">
       <h1>Chcesz jakies powiadomienie?</h1>
       <div>Siema siema co tam slychac</div>
-      <form onSubmit={handleSubmit}>
+      {/* <form onSubmit={handleSubmit}>
         <input value={name} onChange={handleEvent} placeholder="Podaj imie" />
         <button type="submit">Push notification</button>
-      </form>
+      </form> */}
+      <button onClick={subscribe}>Subscribe</button>
     </div>
   );
 }
