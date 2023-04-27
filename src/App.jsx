@@ -1,11 +1,149 @@
-import React, { useState } from "react";
-// import logo from "./assets/react.svg";
 import "./App.css";
 function App() {
-  // Check if the browser supports the Push API
+  /* Push notification logic. */
 
-  // Convert the public key from base64 to Uint8Array
-  function urlBase64ToUint8Array(base64String) {
+  // async function registerServiceWorker() {
+  //   await navigator.serviceWorker.register("./service-worker.js");
+  //   // updateUI();
+  // }
+
+  // async function unregisterServiceWorker() {
+  //   const registration = await navigator.serviceWorker.getRegistration();
+  //   await registration.unregister();
+  //   // updateUI();
+  // }
+
+  async function subscribeToPush() {
+    if ("serviceWorker" in navigator && "PushManager" in window) {
+      console.log("Push API is supported by this browser.");
+
+      // Register the service worker and get the push subscription
+      navigator.serviceWorker
+        .register("service-worker.js", { scope: "/" })
+        .then(function (registration) {
+          console.log("Service worker registered successfully.");
+          // Ask the user for permission to show notifications
+          return registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlB64ToUint8Array(
+              "BAxlMZZzox2QO5gfZJ6ScvGqUvRcZIB7_h14tHqZ0lyEuDWh1DzPGV7bLV-ILtyGoFgMEBCi6TgiQoDFoIHaww4"
+            ),
+          });
+        })
+        .then(function (subscription) {
+          console.log("Push subscription successful:", subscription);
+          // Send the subscription to the server
+          postToServer("/add-subscription", subscription);
+          // updateUI();
+        })
+        .catch(function (error) {
+          console.error("Service worker registration failed:", error);
+        });
+    } else {
+      console.warn("Push API is not supported by this browser.");
+    }
+  }
+
+  async function unsubscribeFromPush() {
+    const registration = await navigator.serviceWorker.getRegistration();
+    const subscription = await registration.pushManager.getSubscription();
+    postToServer("/remove-subscription", {
+      endpoint: subscription.endpoint,
+    });
+    await subscription.unsubscribe();
+    // updateUI();
+  }
+
+  async function notifyMe() {
+    const registration = await navigator.serviceWorker.getRegistration();
+    const subscription = await registration.pushManager.getSubscription();
+    postToServer("/notify-me", { endpoint: subscription.endpoint });
+  }
+
+  async function notifyAll() {
+    const response = await fetch("/notify-all", {
+      method: "POST",
+    });
+    if (response.status === 409) {
+      document.getElementById("notification-status-message").textContent =
+        "There are no subscribed endpoints to send messages to, yet.";
+    }
+  }
+
+  /* UI logic. */
+
+  // async function updateUI() {
+  //   const registrationButton = document.getElementById("register");
+  //   console.log("przycisk", registrationButton);
+  //   const unregistrationButton = document.getElementById("unregister");
+  //   const registrationStatus = document.getElementById(
+  //     "registration-status-message"
+  //   );
+  //   const subscriptionButton = document.getElementById("subscribe");
+  //   const unsubscriptionButton = document.getElementById("unsubscribe");
+  //   const subscriptionStatus = document.getElementById(
+  //     "subscription-status-message"
+  //   );
+  //   const notifyMeButton = document.getElementById("notify-me");
+  //   const notificationStatus = document.getElementById(
+  //     "notification-status-message"
+  //   );
+  //   // Disable all buttons by default.
+  //   registrationButton.disabled = true;
+  //   unregistrationButton.disabled = true;
+  //   subscriptionButton.disabled = true;
+  //   unsubscriptionButton.disabled = true;
+  //   notifyMeButton.disabled = true;
+  //   // Service worker is not supported so we can't go any further.
+  //   if (!"serviceWorker" in navigator) {
+  //     registrationStatus.textContent =
+  //       "This browser doesn't support service workers.";
+  //     subscriptionStatus.textContent =
+  //       "Push subscription on this client isn't possible because of lack of service worker support.";
+  //     notificationStatus.textContent =
+  //       "Push notification to this client isn't possible because of lack of service worker support.";
+  //     return;
+  //   }
+  //   const registration = await navigator.serviceWorker.getRegistration();
+  //   // Service worker is available and now we need to register one.
+  //   if (!registration) {
+  //     registrationButton.disabled = false;
+  //     registrationStatus.textContent =
+  //       "No service worker has been registered yet.";
+  //     subscriptionStatus.textContent =
+  //       "Push subscription on this client isn't possible until a service worker is registered.";
+  //     notificationStatus.textContent =
+  //       "Push notification to this client isn't possible until a service worker is registered.";
+  //     return;
+  //   }
+  //   registrationStatus.textContent = `Service worker registered. Scope: ${registration.scope}`;
+  //   const subscription = await registration.pushManager.getSubscription();
+  //   // Service worker is registered and now we need to subscribe for push
+  //   // or unregister the existing service worker.
+  //   if (!subscription) {
+  //     unregistrationButton.disabled = false;
+  //     subscriptionButton.disabled = false;
+  //     subscriptionStatus.textContent =
+  //       "Ready to subscribe this client to push.";
+  //     notificationStatus.textContent =
+  //       "Push notification to this client will be possible once subscribed.";
+  //     return;
+  //   }
+  //   // Service worker is registered and subscribed for push and now we need
+  //   // to unregister service worker, unsubscribe to push, or send notifications.
+  //   subscriptionStatus.textContent = `Service worker subscribed to push. Endpoint: ${subscription.endpoint}`;
+  //   notificationStatus.textContent =
+  //     "Ready to send a push notification to this client!";
+  //   unregistrationButton.disabled = false;
+  //   notifyMeButton.disabled = false;
+  //   unsubscriptionButton.disabled = false;
+  // }
+
+  /* Utility functions. */
+
+  // Convert a base64 string to Uint8Array.
+  // Must do this so the server can understand the VAPID_PUBLIC_KEY.
+  const urlB64ToUint8Array = (base64String) => {
     const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
     const base64 = (base64String + padding)
       .replace(/\-/g, "+")
@@ -16,76 +154,36 @@ function App() {
       outputArray[i] = rawData.charCodeAt(i);
     }
     return outputArray;
-  }
+  };
 
-  // Send the subscription to the server
-  function sendSubscriptionToServer(subscription) {
-    // const endpoint = subscription.endpoint;
-    // const key = subscription.keys.auth;
-    // const token = subscription.keys.p256dh;
-    // Make an AJAX request to your server to save the subscription
-    // You can use any HTTP library you prefer, like Axios or jQuery
-    // Here's an example using fetch:
-    fetch("/subscribe", {
+  async function postToServer(url, data) {
+    let response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(subscription),
-    })
-      .then(function (response) {
-        if (response.ok) {
-          console.log("Subscription saved on the server.");
-        } else {
-          console.error("Subscription could not be saved on the server.");
-        }
-      })
-      .catch(function (error) {
-        console.error("Error saving subscription on the server:", error);
-      });
+      body: JSON.stringify(data),
+    });
   }
 
-  async function subscribe() {
-    if ("serviceWorker" in navigator && "PushManager" in window) {
-      console.log("Push API is supported by this browser.");
+  // window.onload = updateUI;
 
-      // Register the service worker and get the push subscription
-      navigator.serviceWorker
-        .register("service-worker.js", { scope: "/" })
-        .then(function (registration) {
-          console.log("Service worker registered successfully.");
-
-          // Ask the user for permission to show notifications
-          return registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(
-              "BAxlMZZzox2QO5gfZJ6ScvGqUvRcZIB7_h14tHqZ0lyEuDWh1DzPGV7bLV-ILtyGoFgMEBCi6TgiQoDFoIHaww4"
-            ),
-          });
-        })
-        .then(function (subscription) {
-          console.log("Push subscription successful:", subscription);
-
-          // Send the subscription to the server
-          sendSubscriptionToServer(subscription);
-        })
-        .catch(function (error) {
-          console.error("Service worker registration failed:", error);
-        });
-    } else {
-      console.warn("Push API is not supported by this browser.");
-    }
-  }
   return (
     <div className="App">
-      <h1>Chcesz jakies powiadomienie?</h1>
-      <div>Siema siema co tam slychac</div>
-      {/* <form onSubmit={handleSubmit}>
-        <input value={name} onChange={handleEvent} placeholder="Podaj imie" />
-        <button type="submit">Push notification</button>
-      </form> */}
-      <button onClick={subscribe}>Subscribe</button>
+      <button id="subscribe" onClick={subscribeToPush}>
+        Subscribe to push
+      </button>
+      <button id="unsubscribe" onClick={unsubscribeFromPush}>
+        Unsubscribe from push
+      </button>
+      <button id="notify-me" onClick={notifyMe}>
+        Notify me
+      </button>
+      <button id="notify-all" onClick={notifyAll}>
+        Notify all
+      </button>
     </div>
   );
 }
+
 export default App;

@@ -1,68 +1,92 @@
 const express = require("express");
 const webpush = require("web-push");
-const bodyParser = require("body-parser");
+const bodyparser = require("body-parser");
+
+const port = 8080;
+const vapidDetails = {
+  publicKey:
+    "BAxlMZZzox2QO5gfZJ6ScvGqUvRcZIB7_h14tHqZ0lyEuDWh1DzPGV7bLV-ILtyGoFgMEBCi6TgiQoDFoIHaww4",
+  privateKey: "yQe0VoLOh5LPIEVCiO9f7hc5K0n_upXervpa2YpRyxQ",
+  subject: "Aronek",
+};
+
+const subscriptions = [];
+
+function sendNotifications(subscriptions) {
+  const notification = JSON.stringify({
+    title: "Hello, Notifications!",
+    options: {
+      body: `ID: ${Math.floor(Math.random() * 100)}`,
+    },
+  });
+  const options = {
+    TTL: 10000,
+    vapidDetails: vapidDetails,
+  };
+  subscriptions.forEach((subscription) => {
+    const endpoint = subscription.endpoint;
+    const id = endpoint.substr(endpoint.length - 8, endpoint.length);
+    webpush
+      .sendNotification(subscription, notification, options)
+      .then((result) => {
+        console.log(`Endpoint ID: ${id}`);
+        console.log(`Result: ${result.statusCode}`);
+      })
+      .catch((error) => {
+        console.log(`Endpoint ID: ${id}`);
+        console.log(`Error: ${error} `);
+      });
+  });
+}
 
 const app = express();
-const port = 3000;
+app.use(bodyparser.json());
+app.use(express.static("public"));
 
-// Use bodyParser middleware to parse JSON
-app.use(bodyParser.json());
-
-// Configure webpush with your VAPID keys
-const vapidPublicKey =
-  "BAxlMZZzox2QO5gfZJ6ScvGqUvRcZIB7_h14tHqZ0lyEuDWh1DzPGV7bLV-ILtyGoFgMEBCi6TgiQoDFoIHaww4";
-const vapidPrivateKey = "yQe0VoLOh5LPIEVCiO9f7hc5K0n_upXervpa2YpRyxQ";
-webpush.setVapidDetails(
-  "mailto:your-email@example.com",
-  vapidPublicKey,
-  vapidPrivateKey
-);
-
-// Handle POST requests to /subscribe
-app.post("/subscribe", (req, res) => {
-  // Get the subscription object from the request body
-  const subscription = req.body.endpoint;
-
-  // Save the subscription to a database
-  // You can use any database you prefer, like MongoDB or Redis
-  // Here's an example using an in-memory array:
-  const subscriptions = [];
-  subscriptions.push(subscription);
-
-  // Send a 201 Created response to the client
-  res.status(201).json({ message: "Subscription saved." });
+app.post("/add-subscription", (request, response) => {
+  console.log(`Subscribing ${request.body.endpoint}`);
+  subscriptions.push(request.body);
+  response.sendStatus(200);
 });
 
-// Handle POST requests to /notify
-app.post("/notify", (req, res) => {
-  // Get the notification data from the request body
-  const data = req.body;
-
-  // Create the notification payload
-  const payload = JSON.stringify({
-    title: data.title || "New Notification",
-    body: data.body || "This is a new notification.",
-    icon: data.icon || "/images/icon.png",
-    badge: data.badge || "/images/badge.png",
-    url: data.url || "/",
-    actions: data.actions || [],
-  });
-
-  // Send the notification to all subscribed clients
-  const subscriptions = [];
-  // Replace this with your own logic to get the subscriptions from the database
-  // Here's an example using the in-memory array:
-  subscriptions.forEach((subscription) => {
-    webpush
-      .sendNotification(subscription, payload)
-      .catch((error) => console.error("Error sending notification:", error));
-  });
-
-  // Send a 200 OK response to the client
-  res.status(200).json({ message: "Notification sent." });
+app.post("/remove-subscription", (request, response) => {
+  console.log(`Unsubscribing ${request.body.endpoint}`);
+  const index = subscriptions.findIndex(
+    (subscription) => subscription.endpoint === request.body.endpoint
+  );
+  if (index !== -1) {
+    subscriptions.splice(index, 1);
+  }
+  response.sendStatus(200);
 });
 
-// Start the server
-app.listen(port, () => {
-  console.log("Server started at http://localhost:", port);
+app.post("/notify-me", (request, response) => {
+  console.log(`Notifying ${request.body.endpoint}`);
+  const subscription = subscriptions.find(
+    (subscription) => subscription.endpoint === request.body.endpoint
+  );
+  if (subscription) {
+    sendNotifications([subscription]);
+    response.sendStatus(200);
+  } else {
+    response.sendStatus(404);
+  }
+});
+
+app.post("/notify-all", (request, response) => {
+  console.log("Notifying all subscribers");
+  if (subscriptions.length > 0) {
+    sendNotifications(subscriptions);
+    response.sendStatus(200);
+  } else {
+    response.sendStatus(409);
+  }
+});
+
+app.get("/", (request, response) => {
+  response.sendFile(__dirname + "index.html");
+});
+
+const listener = app.listen(port, () => {
+  console.log(`Listening on port ${listener.address().port}`);
 });
