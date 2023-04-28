@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 // import logo from "./assets/react.svg";
 import "./App.css";
 function App() {
@@ -44,36 +43,47 @@ function App() {
         console.error("Error saving subscription on the server:", error);
       });
   }
-
+  addEventListener("load", async () => {
+    let sw = await navigator.serviceWorker.register("service-worker.js");
+    console.log("serviceWoker registered", sw);
+  });
   async function subscribe() {
     if ("serviceWorker" in navigator && "PushManager" in window) {
       console.log("Push API is supported by this browser.");
-
+      let sw = await navigator.serviceWorker.ready;
+      let push = await sw.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(
+          "BAxlMZZzox2QO5gfZJ6ScvGqUvRcZIB7_h14tHqZ0lyEuDWh1DzPGV7bLV-ILtyGoFgMEBCi6TgiQoDFoIHaww4"
+        ),
+      });
+      let wiadomoscTekst = JSON.stringify(push);
+      console.log(wiadomoscTekst);
       // Register the service worker and get the push subscription
-      navigator.serviceWorker
-        .register("service-worker.js", { scope: "/" })
-        .then(function (registration) {
-          console.log("Service worker registered successfully.");
+      //   navigator.serviceWorker
+      //     .ready
+      //     .then(function (registration) {
+      //       console.log("Service worker registered successfully.");
 
-          // Ask the user for permission to show notifications
-          return registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(
-              "BAxlMZZzox2QO5gfZJ6ScvGqUvRcZIB7_h14tHqZ0lyEuDWh1DzPGV7bLV-ILtyGoFgMEBCi6TgiQoDFoIHaww4"
-            ),
-          });
-        })
-        .then(function (subscription) {
-          console.log("Push subscription successful:", subscription);
+      //       // Ask the user for permission to show notifications
+      //       return registration.pushManager.subscribe({
+      //         userVisibleOnly: true,
+      //         applicationServerKey: urlBase64ToUint8Array(
+      //           "BAxlMZZzox2QO5gfZJ6ScvGqUvRcZIB7_h14tHqZ0lyEuDWh1DzPGV7bLV-ILtyGoFgMEBCi6TgiQoDFoIHaww4"
+      //         ),
+      //       });
+      //     })
+      //     .then(function (subscription) {
+      //       console.log("Push subscription successful:", subscription);
 
-          // Send the subscription to the server
-          sendSubscriptionToServer(subscription);
-        })
-        .catch(function (error) {
-          console.error("Service worker registration failed:", error);
-        });
-    } else {
-      console.warn("Push API is not supported by this browser.");
+      //       // Send the subscription to the server
+      //       sendSubscriptionToServer(subscription);
+      //     })
+      //     .catch(function (error) {
+      //       console.error("Service worker registration failed:", error);
+      //     });
+      // } else {
+      //   console.warn("Push API is not supported by this browser.");
     }
   }
   return (
