@@ -15,7 +15,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      injectRegister: "script",
+      injectRegister: "auto",
     }),
   ],
 });
