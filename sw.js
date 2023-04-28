@@ -1,15 +1,18 @@
-self.addEventListener("push", function (e) {
-  let options = {
-    body: "This notification was generated from push!",
-    icon: "./assets/react.svg",
-    data: {
-      dateOfArrival: Date.now(),
-      primaryKey: 2,
-    },
-    action: [
-      { action: "explore", title: "Explore this new world" },
-      { action: "close", title: "Close" },
-    ],
+// Handle the push event in the service worker
+self.addEventListener("push", function (event) {
+  console.log("Push event received:", event);
+
+  // Get the notification data
+  const data = event.data.json();
+  const title = data.title || "New Notification";
+  const options = {
+    body: data.body || "This is a new notification.",
+    icon: data.icon || "/images/icon.png",
+    badge: data.badge || "/images/badge.png",
+    data: data.url || "/",
+    actions: data.actions || [],
   };
-  e.waitUntil(self.registration.showNotification("Hello World!", options));
+
+  // Show the notification
+  event.waitUntil(self.registration.showNotification(title, options));
 });
