@@ -44,7 +44,7 @@ function App() {
       });
   }
   addEventListener("load", async () => {
-    let sw = await navigator.serviceWorker.register("sw.js");
+    let sw = await navigator.serviceWorker.register("registerSW.js");
     console.log("serviceWoker registered", sw);
   });
   async function subscribe() {
